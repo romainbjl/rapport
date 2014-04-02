@@ -1,0 +1,26 @@
+Table de routage IP du noyau
+Destination     Passerelle      Genmask         Indic Metric Ref    Use Iface
+10.42.0.2       0.0.0.0         255.255.255.254 U     0      0        0 eth0
+172.16.90.40    0.0.0.0         255.255.255.254 U     0      0        0 eth1
+172.16.91.0     172.16.90.41    255.255.255.0   UG    0      0        0 eth1
+
+Table de routage IPv6 du noyau
+Destination                    Next Hop                   Flag Met Ref Use If
+fc00::1:0/112                  ::                         U    256 0     5 eth1
+fc01::/16                      fc00::1:2                  UG   1024 0     0 eth1
+fcab::/112                     ::                         U    256 0     0 eth0
+fe80::/64                      ::                         U    256 0     0 eth1
+fe80::/64                      ::                         U    256 0     0 eth0
+::/0                           ::                         !n   -1  1    48 lo
+::1/128                        ::                         Un   0   1    31 lo
+fc00::1:0/128                  ::                         Un   0   1     0 lo
+fc00::1:1/128                  ::                         Un   0   1    15 lo
+fcab::/128                     ::                         Un   0   1     0 lo
+fcab::2/128                    ::                         Un   0   1     0 lo
+fe80::/128                     ::                         Un   0   1     0 lo
+fe80::/128                     ::                         Un   0   1     0 lo
+fe80::206:29ff:fe4f:259/128    ::                         Un   0   1    18 lo
+fe80::218:8bff:fe20:ecbb/128   ::                         Un   0   1     0 lo
+ff00::/8                       ::                         U    256 0     0 eth1
+ff00::/8                       ::                         U    256 0     0 eth0
+::/0                           ::                         !n   -1  1    48 lo

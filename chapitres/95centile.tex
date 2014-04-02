@@ -1,0 +1,85 @@
+\section{95\up{ème} centile}
+	\subsection{Présentation}
+		\vspace{0.3cm}
+
+		La mesure du 95\up{ème} centile est utilisée par les opérateurs sur internet pour facturer la consommation de bande passante à leurs clients. L'unité de mesure du Mbps consommé est la plus souvent utilisée par les hébergeurs envers leurs clients.\\
+
+		Cette mesure correspond à l'usage de bande passante utile pendant 95\% du temps sur la période choisie pour le calcul.\\
+
+		Dans cette perspective, l'association LDN souhaiterait évaluer la consommation de chaque abonné et ainsi leur offrir la possibilité de choisir leur tarification en fonction de leur consommation.\\
+
+	\subsection{Mise en place des graphiques automatiques pour le 95\up{ème} centile}
+		\vspace{0.3cm}
+
+		La solution open source Zabbix offre énormément d'options de supervision, parmi elles la création automatique de graphiques. Chaque graphique devra être créé lors de la découverte d'un nouvelle interface. Les services de Zabbix étant répartis en différents modèles (Template), nous avons utilisé celui lié par défaut à chaque nouvel hôte. Celui-ci regroupe toutes les informations sur l'OS de la machine (Template OS Linux). La génération de ces graphiques ou Graph prototype s'effectue à chaque détection d'un nouvel hôte. Ces graphiques sont disponibles dans le menu Supervision/Graphique de la page d'accueil. Selon notre configuration, les graphiques générés affichent l'évolution du débit entrant et/ou sortant de chaque interface réseau active de l'hôte. La configuration de ces graphiques est plutôt simple (voir image suivante).\\
+
+\begin{center}
+
+		\includegraphics[width=15.5cm]{95centil2.png}
+
+		\vspace{0.3cm}
+
+\end{center}
+
+		Pour la déclaration d'un nouveau graphique, il y a à disposition au minimum douze variables configurables.\\
+
+		\begin{tabular}{|c|c|m{9cm}|}
+\hline
+\bf Propriété & \bf Type de variable & \bf Description \\
+
+\hline
+Id Graphique & string & (Lecture seule) Id unique du graphique prototype. \\
+
+\hline
+Nom & string & Nom du graphique \\
+
+\hline
+Largeur & entier & Largeur en pixel du graphique prototype. \\
+
+\hline
+Hauteur & entier & Hauteur de pixel du graphique prototype. \\
+
+\hline
+Type de graphique & entier & Quatre types de graphiques sont disponibles. Les valeurs possibles :  0- (Normal par défaut), 1- (empilé): Permet de placer les données bout à bout pour comparer la contribution de chaque série à la somme des valeurs, 2- (barre de secteur): Secteur d'un graphique éclaté dans un graphique en colonne empilé, 3- (éclaté) Secteur séparé des autres. \\
+
+\hline
+Vue 3D & entier & Il est possible de créer des graphiques en 3D mais cette option n'est disponible qu'avec des graphiques de type secteur ou éclaté. La valeur par défaut est 0 (2D) pour passer en 3D la valeur 1 doit être passée. \\
+
+\hline
+Afficher la légende & entier & Activer ou désactiver la légende du graphique : valeur 0 pour cacher et 1 pour activer. \\
+
+\hline
+Temps de travail & entier & Activer ou désactiver l'affichage du temps de travail sur les graphiques. \\
+
+\hline
+Afficher les déclencheurs & entier & Activer (1) ou désactiver (0) les déclencheurs liés aux graphiques. \\ 
+
+\hline
+Centile gauche & float & Valeur du centile sur l'axe gauche par défaut la valeur est à 0. Nous utilisons cette valeur pour nos calculs avec la valeur 95. \\
+
+\hline
+Centile droit & float & Valeur du centile sur l'axe de droite par défaut la valeur est à 0. Nous utilisons cette valeur pour nos calcul avec la valeur 95. \\
+
+\hline
+Valeur minimal axe Y & float & Définir une valeur minimale d'affichage de l'axe Y sur le graphique. Nous utilisons la valeur calculée automatiquement pour obtenir un graphique dynamique qui change d'échelle pour une meilleure visualisation du débit entrant et sortant. \\
+
+\hline
+Valeur maximal axe Y & float & Définir une valeur maximale d'affichage de l'axe Y sur le graphique. Nous utilisons la valeur calculée automatiquement pour obtenir un graphique dynamique qui change d'échelle pour une meilleure visualisation du débit entrant et sortant. \\
+
+\hline
+Éléments & - & Choix des différentes interfaces à utiliser pour la réception des données et la création du graphique. Nous utilisons les interfaces réseau et leur débit entrant et sortant pour créer nos graphiques. \\
+
+\hline
+\end{tabular}
+
+\vspace{0.3cm}
+
+		Un aperçu est disponible pour évaluer le résultat de la configuration de notre graphique et ainsi modifier les valeurs de mise en forme pour obtenir une visualisation parfaite. Il est également possible de cloner un graphique déjà créé au préalable et ainsi récupérer une configuration identique.\\
+
+	\subsection{Récupération de la valeur}
+		\vspace{0.3cm}
+
+		Bien que nous affichons maintenant la ligne du 95\up{ème} centile, il nous faudrait maintenant trouver le moyen de l'exploiter. Malheureusement après de nombreuses recherches, il semblerait que cela ne soit pas possible depuis Zabbix. Nous avons néanmoins trouvé une manière de l'obtenir, mais pour cela il aurait fallu appliquer un patch, puis compiler l'installation du service Zabbix. Les tuteurs ne voulaient pas partir sur une solution compilée. Le patch est disponible à l'adresse suivante : \url{https://support.zabbix.com/browse/ZBXNEXT-756}.
+
+
+\newpage		

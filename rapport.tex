@@ -1,0 +1,86 @@
+\documentclass{article}
+\usepackage[a4paper]{geometry}
+\usepackage[francais]{babel}
+\usepackage[utf8]{inputenc}
+\usepackage{graphicx}
+\usepackage{wrapfig}
+\usepackage[table]{xcolor}
+\usepackage[hidelinks]{hyperref}
+\usepackage{fancyhdr}
+\usepackage{url}
+\usepackage{lastpage}
+\usepackage{titlesec}
+\usepackage{listings}
+\NoAutoSpaceBeforeFDP
+\geometry{top=1.6cm, bottom=1.45cm, left=1.5cm, right=1.5cm}
+\graphicspath{{Pictures/}}
+\titleformat{\part}[block]{\Huge\bfseries\filcenter}{Partie \thepart\\}{1em}{}
+\pagestyle{fancy}
+
+\title{\textbf{Rapport de stage}}
+\author{Romain BOUAJILA}
+\date{\today}
+
+%Haut de page
+\renewcommand\headrulewidth{1pt}
+\fancyhead[L]{Rapport de stage}
+\fancyhead[C]{Licence Professionnelle ASRALL}
+\fancyhead[R]{\today}
+
+%Bas de page
+\renewcommand\footrulewidth{1pt}
+\fancyfoot[L]{\vspace{-0.8cm}\leftmark}
+\fancyfoot[C]{\vspace{-0.8cm}\textbf{Page \thepage/\pageref{LastPage}}}
+\fancyfoot[R]{\includegraphics[scale=0.5]{logoIut0.png}}
+
+\begin{document}
+
+	\maketitle
+
+	\begin{center}
+		\Large{\textbf{Révision des solutions de supervision}}\\
+		\normalsize{Maître de stage : Jean-Charles BRIATTE}
+	\end{center}
+
+	\vspace{1cm}
+
+	\begin{center}
+		\includegraphics[scale=0.6]{logoSS2i.png}
+	\end{center}
+
+	\vspace{0.5cm}
+
+	\begin{center}
+		\includegraphics[scale=1.5]{logoUniv0.jpg}
+	\end{center}
+
+	\vspace{0.2cm}
+	
+	\begin{center}
+		\includegraphics[scale=0.9]{logoIut2.png}
+	\end{center}
+
+	\newpage
+
+	\tableofcontents
+
+	\newpage
+
+	\begin{figure}[p]
+		\centering
+		\part{Présentation du projet}
+	\end{figure}
+
+	\begin{figure}[p]
+		\centering
+		\part{Partie technique}
+	\end{figure}
+
+	\begin{figure}[p]
+		\centering
+		\part{Annexes}
+	\end{figure}
+
+	\include{chapitres/annexes}
+
+\end{document}

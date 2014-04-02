@@ -1,0 +1,312 @@
+\section{Reproduction réseau}
+	\vspace{0.3cm}
+	Pour une meilleure compréhension du réseau et du travail fourni par LDN, ainsi qu'une mise en situation la plus proche possible de l'environnement actuellement en production dans l'association, les tuteurs nous ont proposé d'effectuer une reproduction simplifiée de leur infrastructure (voir schéma disponible au point \ref{schemaReseau0}). Bien entendu, nous avons tout de suite accepté car cela allait nous permettre de pouvoir travailler sur un aspect purement réseau que nous avons peu abordé au cours de la licence, ainsi que la découverte de l'IPv6 que nous voyons peu en cours ainsi que sur des réseaux en production.\\
+
+	Malheureusement, au départ nous n'avions pas compris l'importance de la mise en place des routes pour le reste du sujet, et face à de la création des machines virtuelles, surtout pour la partie de la configuration réseau, nous avions pris l'initiative de mettre en place du NAT sur le routeur. Après notre première réunion avec les tuteurs, qui nous ont expliqué l'intérêt de la mise en place des routes, nous avons donc fait le maximum pour récupérer l'erreur que nous avions commise.\\
+
+	\subsection{Création des machines virtuelles}
+		\vspace{0.3cm}
+		La création des machines virtuelles a été l'une des tâches les plus compliquées pour cette partie, notamment sur le plan réseau. En effet nous n'avions pas encore commencé les cours sur l'aspect réseau des machines virtuelles, énormément de choix qui s'offraient à nous lors de la création de ces dernières et nous ne savions laquelle de ces solutions pouvait répondre à nos attentes. Nous avons donc demandé aux tuteurs qui nous ont indiqué que LDN utilisait une technique un peu spéciale. Dans un premier temps, ils créent une machine virtuelle (grâce à KVM/QEMU) avec les configurations réseau par défaut, connexion en bridge, puis la sortent du bridge pour lui attribuer une adresse IPv6 manuellement.\\
+
+		Pour commencer il faut préalablement installer les paquets qui nous seront utiles, \verb?apt-get install libvirt-bin? \verb?virtinst qemu-kvm deboostrap?, ils serviront entre autres à la création de la machine virtuelle ainsi que sa gestion grâce à un terminal. Dans l'exemple qui suit nous allons créer une machine virtuelle appelée \verb?vm1? fonctionnant sur une distribution Debian Wheezy. Dans l'ordre nous allons donc : créer un disque de stockage, ajouter un système de fichiers, installer la distribution et enfin ajouter la machine à libvirt pour la gestion (avec \verb?virsh start? ou bien l'utilitaire \verb?libvirt-manager?).\\
+
+		\fcolorbox{gray}{black}{
+			\begin{minipage}{0.9\textwidth}
+			\color{white}
+				root@services \$ cd /var/lib/libvirt/images/
+		
+				root@services \$ \#création du disque
+		
+				root@services \$ dd if=/dev/zero of=vm1.img bs=1M seek=4000 count=1
+		
+				root@services \$ \#mise en place d'un système de fichiers
+		
+				root@services \$ mkfs.ext3 vm1.img
+		
+				root@services \$ \#on monte l'image puis on installe Debian
+		
+				root@services \$ mkdir /mnt/vm1; mount -o loop vm1.img /mnt/vm1
+		
+				root@services \$ debootstrap wheezy /mnt/vm1 http://ftp.debian.org/debian/
+		
+				root@services \$ \#penser à mettre un mot de passe puis démonter le disque
+		
+				root@services \$ chroot /mnt/vm1 passwd
+		
+				root@services \$ umount vm1.img
+
+				root@services \$ \#installation de la machine dans libvirt avec l'ajout temporaire dans le bridge
+
+				root@services \$ virt-install --import --disk path=/var/lib/libvirt/images/vm1.img --vcpus=1 --ram=256 --name=vm1 --hvm --vnc --network bridge:virbr0
+			\color{black}
+			\end{minipage}
+		}
+
+	\subsection{Mise en place des configurations réseau}
+		\subsubsection{Pour les machines virtuelles}
+			\vspace{0.3cm}
+			Suite à notre erreur de compréhension du schéma, expliquée précédemment, les machines virtuelles étaient en bridge avec des configurations réseau assez spéciales. Ne comprenant pas comment et de quelle façon les utiliser pour pouvoir mettre les cartes réseaux sur les VM, nous avons demandé aux tuteurs qui sont venus nous aider. Nous avons donc commencé par prendre un exemple des fichiers xml actuellement en production chez LDN (fichiers de configuration de machines virtuelles pour libvirt) pour l'adapter à nos machines virtuelles grâce à la commande \verb?virsh edit <nomVm>? (voir exemple de xml dans le point \ref{xmlVm0}).\\
+
+			Pour commencer nous devons faire sortir nos machines virtuelles de notre bridge grâce à la commande \verb?ip link set? \verb?dev vnetXX nomaster?. Pour vérifier qu'elles sont correctement sorties du bridge, utiliser la commande \verb?brctlshow?.\\
+
+			Comme dit précédemment, les interfaces réseau des machines virtuelles sont sorties du bridge, elles apparaissent donc comme de nouvelles interfaces sans configuration réseau. Il faut donc commencer par leur en ajouter. Pour cela il faut bien distinguer les deux côtés des interfaces réseau des machines. Dans un premier temps, il y a les interfaces \verb?vnetXX? disponibles sur le serveur, \verb?services?, puis celles disponibles dans les VM, \verb?eth0?. Les interfaces de type \verb?vnetXX? n'ont pas besoin de configuration particulière, néanmoins il faut quand même leur ajouter une IP (de type IPv6 dans notre cas) pour que les paquets depuis la machine virtuelle puissent être routés sur ces interfaces. Pour cela, on ajoute l'adresse IPv6 \verb?fe80::42/64?, pour un aspect purement pratique car tout les interfaces disposent déjà d'une adresse \verb?fe80?, grâce à l'outil IP : \verb?ip a a fe80::42/64 dev vnetXX?. En IPv6 le réseau \verb?fe80::? est dédié aux liens locaux.\\
+
+
+			Ensuite, nous avons besoin d'ajouter les IP des machines virtuelles ainsi que les routes pour qu'elles puissent communiquer avec le faux internet. Celui-ci  sera tout simplement une adresse IP qui représentera l'Internet mondial pour notre configuration. Les configurations qui suivent seront faites pour la \verb?vm0? dont le hostname est \verb?vps0? sur le schéma réseau (voir point \ref{schemaReseau0}). Pour communiquer avec le faux internet, nous devrons faire router tous les paquets de \verb?vps0? vers l'interface \verb?eth1? de la machine services, qui se chargera par la suite de les router correctement vers le faux internet.\\
+
+			\fcolorbox{gray}{black}{
+				\begin{minipage}{0.9\textwidth}
+				\color{white}
+					root@vm0 \$ \#Ajout des adresses ip
+		
+					root@vm0 \$ ip a a 172.16.91.1/32 dev eth0
+		
+					root@vm0 \$ ip a a fc01:42::1/64 dev eth0
+		
+					root@vm0 \$ \#On force la route pour la destination de l'interface réseau eth1 de la machine services, puis on met cette adresse en temps que route par défaut
+		
+					root@vm0 \$ ip r a 172.16.90.41/32 via eth0
+		
+					root@vm0 \$ ip r a default via 172.16.90.41
+		
+					root@vm0 \$ \#On effectue ensuite la même opération pour l'IPv6
+		
+					root@vm0 \$ ip r a default via fe80::42 dev eth0
+				\color{black}
+				\end{minipage}
+			}
+			\\
+
+			Une fois les routes en place on pourra les vérifier grâce à la commande \verb?route -n?, pour IPv4, et \verb?route -n -6?, pour IPv6. Vous trouverez un exemple des tables de routage de \verb?vm0? sur le point \ref{routeVm0}.
+
+		\subsubsection{Pour la machine Services}
+			\vspace{0.3cm}
+			La machine \verb?services? est la machine qui dispose du plus de modifications réseau à effectuer du fait qu'elle héberge les machines virtuelles. De plus, nous lui avons ajouté, pour le bon déroulement du TP, une interface \verb?eth0? qui nous permet une communication constante avec le réseau de la classe et l'Internet. Pour la bonne communication entre tout ces réseaux, nous devons : ajouter les routes pour répondre aux requêtes à destination des VM, ajouter les routes pour le faux internet, mettre en place le forwarding. Par défaut, le forwarding des interfaces réseau ne s'effectue pas dans le noyau Linux, mais il nous sera utile pour transférer les requêtes à destination des VM qui arriveront sur eth1. Pour cela :\\
+
+			\fcolorbox{gray}{black}{
+				\begin{minipage}{0.9\textwidth}
+				\color{white}
+					root@services \$ \#Activation du forwarding IPv4 et IPv6
+				
+					root@services \$ sysctl -w net.ipv4.conf.all.forwarding=1 \&\& sysctl -w net.ipv6.conf.all.forwarding=1
+				
+					root@services \$ \#Mise en place des configurations réseau IPv4 et IPv6 et l'interface eth1
+				
+					root@services \$ ip a a 172.16.90.41 dev eth1
+				
+					root@services \$ ip a a fc00::1:2/112 dev eth1
+				
+					root@services \$ \#Ajout des routes pour la vm0 puis pour la vm1
+				
+					root@services \$ ip r a 172.16.91.1/32 dev vnet0
+				
+					root@services \$ ip r a fc01:42::/64 dev vnet0
+				
+					root@services \$ ip r a 172.16.91.2/32 dev vnet1
+				
+					root@services \$ ip r a fc01:1337::/64 dev vnet1
+				
+					root@services \$ \#Ajout de la route pour le faux internet
+				
+					root@services \$ ip r a 10.200.0.0/16 via 172.16.90.40
+				
+					root@services \$ ip r a fcee::/16 via fc00::1:1
+				\color{black}
+				\end{minipage}
+			}
+			\\
+			
+			Les configurations réseau pour \verb?eth0? (route par défaut et adresse IP) seront automatiquement mises en place par le DHCP de la classe. Une fois les routes en place, on pourra les vérifier grâce à la commande \verb?route -n?, pour IPv4, et \verb?route -n -6?, pour IPv6. Vous trouvez un exemple des tables de routage sur le point \ref{routeServices}.
+
+
+		\subsubsection{Pour la machine Router}
+			\vspace{0.3cm}
+			La machine \verb?router? est celle qui va servir pour effectuer le routage des paquets entre le réseau des VM et le faux internet. L'ajout des adresses réseau permettra de mettre automatiquement la majorité des routes qui nous seront nécessaires. Il suffira donc d'ajouter les routes pour le réseau de VM et une pour le faux internet, qui se servira d'une des IP du PC en ASRALL, ainsi que le forwarding.\\
+
+			\fcolorbox{gray}{black}{
+				\begin{minipage}{0.9\textwidth}
+				\color{white}
+					root@router \$ \#Ajout des IP IPv4 et IPv6 sur eth0
+				
+					root@router \$ ip a a 10.42.0.3/31 dev eth0
+				
+					root@router \$ ip a a fcab::2/112 dev eth0
+				
+					root@router \$ \#Même chose sur eth1
+				
+					root@router \$ ip a a fc00::1:1/112 dev eth1
+				
+					root@router \$ ip a a 172.16.90.40/31 dev eth1
+				
+					root@router \$ \#Activation du forward IPv4 IPv6
+				
+					root@router \$ sysctl -w net.ipv4.conf.all.forwarding=1 \&\& sysctl -w net.ipv6.conf.all.forwarding=1
+				
+					root@router \$ \#Ajout des routes pour le réseau de vm
+				
+					root@router \$ ip r a fc01::/16 via fc00::1:2
+				
+					root@router \$ ip r a 172.16.91.0/24 via 172.16.90.41
+				
+					root@router \$ \#Ajout des routes pour le faux internet
+				
+					root@router \$ ip r a fcee:dead:babe::/64 via fcab::1
+				
+					root@router \$ ip r a 10.200.42.0/24 via 10.42.0.2
+				\color{black}
+				\end{minipage}
+			}
+			\\
+
+			Une fois les routes en place, on pourra les vérifier grâce à la commande \verb?route -n?, pour IPv4, et \verb?route -n -6?, pour IPv6. Vous trouverez un exemple des tables de routage  sur le point \ref{routeRouter}.\\
+
+
+		\subsubsection{Pour le PC en ASRALL}
+			\vspace{0.3cm}
+			Le PC en ASRALL est la station qui va représenter le faux internet. Pour cela nous avons tout simplement ajouté une IP qui n'appartenait à aucun des réseaux utilisés dans notre infrastructure. Il suffisait tout simplement d'ajouter 4 nouvelles adresses IP, deux IPv4/IPv6 pour la connexion avec le routeur et deux autres pour le faux internet, à l'interface eth1 de notre station, deux routes pour la connexion au VM et enfin l'activation du forwarding.
+
+			\fcolorbox{gray}{black}{
+				\begin{minipage}{0.9\textwidth}
+				\color{white}
+					root@asrall \$ \#Ajout des ip pour la connexion au routeur
+
+					root@asrall \$ ip a a 10.42.0.2/31 dev eth1
+
+					root@asrall \$ ip a a fcab::1/112 dev eth1
+
+					root@asrall \$ \#Ajout des ip du faux internet
+
+					root@asrall \$ ip a a 10.200.42.1/32 dev eth1
+
+					root@asrall \$ ip a a fcee:dead:babe::1/128
+
+					root@asrall \$ \#Ajout de route pour les vm
+
+					root@asrall \$ ip route a 172.16.0.0/16 via 10.42.0.3
+
+					root@asrall \$ ip route a fc00::/12 via fcab::2
+				\color{black}
+				\end{minipage}
+			}
+			\\
+
+			Une fois les routes en place, on pourra les vérifier grâce à la commande \verb?route -n?, pour IPv4, et \verb?route -n -6?, pour IPv6. Vous trouvez un exemple des tables de routage sur le point \ref{routeASRALL}.\\
+	
+	\subsection{Évolution du schéma réseau}
+		\vspace{0.3cm}
+		Pour pouvoir effectuer plus en profondeur les objectifs, ainsi que la ressemblance maximale par rapport au réseau en production, les tuteurs nous ont fait évoluer notre schéma réseau (voir nouveau schéma point \ref{schemaReseau1}).\\
+
+		Le peering et le transit représentent deux types de routage utilisés par les FAI en général, mais leur différence est uniquement commerciale. En effet l'interrogation de routes n'est pas gratuite en règle générale, car le transitaire payera le coût de la demande, au niveau du transfert de paquets de la demande, de cette dernière dont il ne dispose pas, cela passe donc sur sa consommation au 95\up{ème} centile, c'est ce que l'on appelle le transit. Néanmoins il existe des groupes de peers, des associations dans la plupart du temps, qui mettent à disposition leurs propres routes et prennent à leur charge le coût de l'interrogation en étant reliés directement entre eux, c'est ce qu'on appelle le peering.\\
+
+		De ce fait nous avons donc mis en place deux vlan, eth0.800 pour représenter le transit et eth0.267 pour représenter le peering, et une connexion directe entre \verb?Router? et le \verb?PC en ASRALL?. Pour des moyens pratiques nous avons changé la station qui était auparavant le \verb?PC ASRALL?, donc dans notre cas nous repartons de zéro pour cette dernière, dans le cas contraire il aurait fallu penser à supprimer toutes les adresses ajoutées préalablement avec la commande \verb?ip?. Aucune modification ne sera à faire sur la machine \verb?services?, puisque tous les paquets à destination du réseau \verb?10.200.0.0\16? seront routés en direction de \verb?Router? via \verb?eth1?, idem pour \verb?vps0? et \verb?vps1? qui redirigeront tout vers \verb?Services?. Petite particularité à savoir, puisqu'il n'est pas possible au \verb?PC ASRALL? de disposer de deux routes avec une destination identique, il faut rediriger toutes les réponses en direction des VM uniquement par une seul interface vlan. En l'absence de vnet, qui pourrait contourner le problème, nous devons permuter les routes à la main pour les simulations.\\
+
+		\fcolorbox{gray}{black}{
+			\begin{minipage}{0.9\textwidth}
+			\color{white}
+				root@asrall \$ \#on stop l'interface eth0
+
+				root@asrall \$ ifdown eth0
+
+				root@asrall \$ \#On ajoute les vlan dans le fichier interfaces et on commente eth0
+
+				root@asrall \$ vim /etc/network/interfaces
+
+				\color{yellow}12 \color{white} auto eth0.800
+
+				\color{yellow}13 \color{white} ~~~iface eth0.800 inet static
+
+				\color{yellow}14 \color{white} ~~~address 10.42.0.2
+
+				\color{yellow}15 \color{white} ~~~netmask 255.255.255.254
+
+				\color{yellow}16 \color{white}
+
+				\color{yellow}17 \color{white} auto eth0.267
+
+				\color{yellow}18 \color{white} ~~~iface eth0.267 inet static
+
+				\color{yellow}19 \color{white} ~~~address 10.43.0.2
+
+				\color{yellow}20 \color{white} ~~~netmask 255.255.255.254\\
+
+				root@asrall \$ \#On up les deux interfaces vlan
+
+				root@asrall \$ ifup eth0.800 \&\& ifup eth0.267
+
+				root@asrall \$ \#Plus qu'à donner les bonnes configurations réseau pour eth0.800 pour commencer 
+
+				root@asrall \$ ip a a 10.200.42.1/32 dev eth0.800
+
+				root@asrall \$ ip a a fcab::1/112 dev eth0.800
+
+				root@asrall \$ ip a a fcee:dead:babe::1/128 dev eth0.800
+
+				root@asrall \$ \#Idem pour eth0.267
+
+				root@asrall \$ ip a a 10.200.43.1/32 dev eth0.267
+
+				root@asrall \$ ip a a fcac::1/112 dev eth0.267
+
+				root@asrall \$ ip a a fcff:dead:beef::1/128 dev eth0.267
+
+				root@asrall \$ \#Ajout des routes pour communiquer avec les VM. Dans ce cas ci tout passera par eth0.800
+
+				root@asrall \$ ip r a fc00::/12 via fcab::2
+
+				root@asrall \$ ip r a 172.16.0.0/16 via 10.42.0.3
+
+				root@router \$ \#On stop eth0 sur router maintenant
+
+				root@router \$ ifdwon eth0
+				
+				root@router \$ \#On ajoute les vlan dans le fichier interfaces et on commente eth0
+
+				root@router \$ vim /etc/network/interfaces
+
+				\color{yellow}12 \color{white} auto eth0.800
+
+				\color{yellow}13 \color{white} ~~~iface eth0.800 inet static
+
+				\color{yellow}14 \color{white} ~~~address 10.42.0.3
+
+				\color{yellow}15 \color{white} ~~~netmask 255.255.255.254
+
+				\color{yellow}16 \color{white}
+
+				\color{yellow}17 \color{white} auto eth0.267
+
+				\color{yellow}18 \color{white} ~~~iface eth0.267 inet static
+
+				\color{yellow}19 \color{white} ~~~address 10.43.0.3
+
+				\color{yellow}20 \color{white} ~~~netmask 255.255.255.254\\
+
+				root@router \$ \#On ajoute l'IPv6 sur eth0.800 et eth0.267
+
+				root@router \$ ip a a fcab::2/112 dev eth0.800
+
+				root@router \$ ip a a fcac::2/112 dev eth0.267
+
+				root@router \$ \#Ajout des routes pour le transit
+
+				root@router \$ ip r a fcee:dead:babe::/64 via fcab::1
+
+				root@router \$ ip r a 10.200.42.0/24 via 10.42.0.2
+
+				root@router \$ \#Idem pour le peering
+
+				root@router \$ ip r a fcff:dead:beef::/64 via fcac::1
+
+				root@router \$ ip r a 10.200.43.0/24 via 10.43.0.2
+			\color{black}
+			\end{minipage}
+		}
+		\\
+
+		Vous trouverez un exemple des nouvelles tables de routage en annexes point \ref{newRoute}.
+
+		\subsection{Automatisation}
+			\vspace{0.3cm}
+			Bien que les configurations soient correctement mises et opérationnelles, elles n'en sont pas pour autant persistantes. Pour cela, il suffit de créer un script sur chaque machine pour remettre les configurations réseau, et le démarrage des machines virtuelles pour \verb?services?, au redémarrage. Nous avons donc juste besoin de recopier les commandes effectuées sur chaque machine pour les stocker dans un script bash que nous avons appelé \verb?/etc/init.d/route.sh?. Ensuite nous avons ajouté l'exécution du script dans \verb?/etc/init.d/rc.local?.
+
+\newpage

@@ -1,0 +1,34 @@
+Table de routage IP du noyau
+Destination     Passerelle      Genmask         Indic Metric Ref    Use Iface
+0.0.0.0         192.168.1.254   0.0.0.0         UG    0      0        0 eth1
+10.42.0.2       0.0.0.0         255.255.255.254 U     0      0        0 eth0.800
+10.43.0.2       0.0.0.0         255.255.255.254 U     0      0        0 eth0.267
+172.16.0.0      10.42.0.3       255.255.0.0     UG    0      0        0 eth0.800
+192.168.1.0     0.0.0.0         255.255.255.0   U     0      0        0 eth1
+
+Table de routage IPv6 du noyau
+Destination                    Next Hop                   Flag Met Ref Use If
+fc00::/12                      fcab::2                    UG   1024 0     0 eth0.800
+fcab::/112                     ::                         U    256 0     1 eth0.800
+fcac::/112                     ::                         U    256 0     0 eth0.267
+fcee:dead:babe::1/128          ::                         U    256 0     0 eth0.800
+fcff:dead:beef::1/128          ::                         U    256 0     0 eth0.267
+fe80::/64                      ::                         U    256 0     0 eth0
+fe80::/64                      ::                         U    256 0     0 eth0.800
+fe80::/64                      ::                         U    256 0     0 eth0.267
+fe80::/64                      ::                         U    256 0     0 eth1
+::/0                           ::                         !n   -1  1   866 lo
+::1/128                        ::                         Un   0   1  1001 lo
+fcab::1/128                    ::                         Un   0   1     0 lo
+fcac::1/128                    ::                         Un   0   1     0 lo
+fcee:dead:babe::1/128          ::                         Un   0   1     0 lo
+fcff:dead:beef::1/128          ::                         Un   0   1     0 lo
+fe80::221:91ff:fe8c:e863/128   ::                         Un   0   1     0 lo
+fe80::221:91ff:fe8c:e863/128   ::                         Un   0   1     0 lo
+fe80::221:91ff:fe8c:e863/128   ::                         Un   0   1     0 lo
+fe80::f24d:a2ff:fe2c:5e6a/128  ::                         Un   0   1     0 lo
+ff00::/8                       ::                         U    256 0     0 eth0
+ff00::/8                       ::                         U    256 0     0 eth0.800
+ff00::/8                       ::                         U    256 0     0 eth0.267
+ff00::/8                       ::                         U    256 0     0 eth1
+::/0                           ::                         !n   -1  1   866 lo

@@ -1,0 +1,100 @@
+\section{Supervision du débit}
+	\subsection{Solution vnStat}
+		\subsubsection{Présentation de vnStat}
+			\vspace{0.3cm}
+			
+			\verb?VnStat? est un utilitaire console, qui fonctionne sous les noyaux Linux et BSD, permettant de surveiller et de journaliser la consommation de bande passante sur les interfaces réseau de l'hôte courant. L'un de ses avantages, que nous souhaitions utiliser ici, est de pouvoir sortir les résultats de la bande passante en fonction de leur interface et de leur destination (transit ou peering).\\
+
+		\subsubsection{Utilisation}
+			\vspace{0.3cm}
+			Pour utiliser \verb?vnStat? il faut tout d'abord lui lister toutes les interfaces qu'il devra surveiller. Ces interfaces seront ajoutées sous la forme d'une base de données dans le répertoire \verb?/var/lib/vnstat?. Une fois ajoutées, les interfaces sont immédiatement surveillées par vnStat. On peut ensuite afficher les statistiques générées en fonction d'une échelle de temps : heure, jour, semaine ou mois. Cette dernière nous semblait intéressante car les abonnés reçoivent leur facturation mensuellement. Nous pouvons voir l'utilisation de cet outil dans l'exemple qui suit, avec l'interface \verb?eth0.800?.\\
+
+			\fcolorbox{gray}{black}{
+				\begin{minipage}{0.9\textwidth}
+				\color{white}
+					\texttt{root@router \$ \# Création d'un base sur eth0.800}
+				
+					\texttt{root@router \$ vnstat -u -i eth0.800}
+				
+					\texttt{root@router \$ \# Afficher les statistiques de consommation sur eth0.800 sur un mois}
+				
+					\texttt{root@router \$ vnstat -i eth0.800 -m}
+					
+
+					\texttt{eth0.800  /  monthly}
+
+					\texttt{month        rx       |     tx      |    total    |   avg. rate}
+					
+					\texttt{------------------------+-------------+-------------+---------------}
+					
+					\texttt{Feb '14         1 KiB |     387 KiB |     388 KiB |    0.00 kbit/s}
+					
+					\texttt{Mar '14      1.05 MiB |    2.15 MiB |    3.20 MiB |    0.02 kbit/s}
+					
+					\texttt{------------------------+-------------+-------------+---------------}
+					
+					\texttt{estimated         1 MiB |       3 MiB |       4 MiB |}
+				\color{black}
+				\end{minipage}
+			}
+				
+		\subsubsection{Mise en place dans Zabbix}
+			\vspace{0.3cm}
+
+			Avant de de mettre en place le script pour qu'il soit exécuté par l'agent, il faut donner les droits \verb?sudo? pour la commande \verb?vnstat? à l'utilisateur Zabbix et autoriser l'agent à exécuter les scripts. Vous pouvez retrouver la procédure sur le point \ref{prerequis}, elle est bien entendu à adapter.\\
+
+			De base, Zabbix permet d'ajouter des scripts personnalisés afin de palier au manque de fonctionnalités de l'agent. Zabbix accepte donc plusieurs langages de programmation comme Ruby, Perl, PHP, ou encore Python. \\
+
+			Nous avons commencé par placer le script, fait en bash, dans le répertoire \verb?/etc/zabbix/scripts? que nous avons nous-mêmes créé. Puis nous avons précisé son emplacement dans le fichier \verb?/etc/zabbix/zabbix_agentd.conf? dans l'espace réservé aux paramètres de supervision définis par les utilisateurs : \verb?UserParameter=system.monthlybandwidth,/etc/zabbix/scripts/vnstat.sh?\\
+
+			Nous avons ajouté un élément sur l'hôte router dans le menu Configuration de Zabbix. Ensuite nous devons préciser une clé qui correspond à celle indiquée précédemment dans le fichier \verb?zabbix_agentd.conf?.\\
+
+			Nous avons ensuite créé un nouveau graphique que nous avons lié à l'élément ajouté précédemment.\\
+			Pour intégrer le script bash à Zabbix, il faut se rendre dans l'onglet Hôtes du menu Configuration. On clique ensuite sur la partie Éléments de la ligne correspondant à la machine Router. On peut ensuite créer un nouvel élément.			
+
+			\begin{center}
+            	\includegraphics[scale=0.38]{vnstat0.png}
+			\end{center}
+			
+			Une fois dans le menu de création d'un nouvel élément, plusieurs champs sont à renseigner. Le premier est les champ "Nom" et permet d'attribuer au nouvel élément un nom pour le distinguer des autres. \\
+			Dans le champ Clé, on précise le paramètre personnalisé que l'on a ajouté au fichier \verb?/etc/zabbi/zabbix_agentd.conf? précédemment. On choisi l'interface que l'on veut surveiller, ici l'interface eth1. On choisit ensuite le type de valeur retournée par Zabbix puis l'unité de mesure désirée.
+			\begin{center}
+            	\includegraphics[scale=0.35]{vnstat1.png}
+			\end{center}
+			
+			On peut ensuite sélectionner Network Interfaces comme application liée au nouvel élément.
+			
+			\begin{center}
+            	\includegraphics[scale=0.35]{vnstat2.png}
+       		\end{center}
+			
+			Il ne reste plus qu'à lier le nouvel élément créé à un nouveau graphique grâce à la partie Éléments de la page Configuration des graphiques.
+
+			\begin{center}
+            	 \includegraphics[scale=0.35]{vnstat3.png}
+         	\end{center}
+			
+
+		\subsubsection{Les limites de vnStat}
+			\vspace{0.3cm}
+
+			Malgré beaucoup de fonctionnalités intéressantes, la solution vnStat couplée à TC n'était malheureusement pas possible. En effet, L'outil vnStat ne permet qu'une visualisation de statistiques sur la quantité de données ayant transité sur l'interface sélectionnée. Il n'était donc pas possible de surveiller le débit sur une interface réseau.\\
+			 
+			L'outil \verb?vnStat? ne pouvant pas faire la distinction sur l'adresse IP source des paquets, il fallait contourner le problème, ce que nous pouvions faire en les marquant grâce à \verb?iptables?. Seulement il n'est pas possible non plus d'effectuer une surveillance en fonction de ces marques. Nous avons donc dû nous tourner vers une autre solution plus adaptée à nos besoins.
+
+	\subsection{Solution de développement d'un sniffer}
+		\vspace{0.3cm}
+
+		Nous avons utilisé la librairie Net::Pcap pour développer un sniffer qui nous permettrait d'obtenir les informations sur les paquets transitant et les paquets en peering sur le routeur.\\
+	
+		Pcap ou Packet capture est une interface de programmation permettant de capturer toutes les informations d'un trafic réseau. Elle est implémentée sous les systèmes GNU/Linux, BSD et Mac OS X par la bibliothèque libpcap.\\
+	
+		Le sniffer récupère les informations des paquets sur les interfaces virtuelles d'eth0, eth0.800 et eth0.267. Sur ces paquets, nous relevons les adresses sources et de destinations ainsi que la taille des paquets en octets. Nous récupérons ces informations dans l'optique de faire un tri des paquets par machine virtuelle.\\
+
+		Pour effectuer ce tri, une comparaison entre les adresses IP sources reçues et la plage d'IP utilisée par les machines virtuelles est effectuée. Grâce à cela il est désormais possible d'identifier les paquets entrants et les paquets sortants de l'infrastructure.\\
+
+		La fonction de la librairie Pcap de Perl permettant la capture des paquets s'effectuant dans une boucle infinie et ne pouvant capturer qu'un seul trafic d'interface, nous avons créé deux processus qui supervisent chacun de leur côté une des interfaces virtuelles de eth0 sur le routeur. Nous profitons de ces deux processus pour indiquer également par quelle interface est passé le paquet (eth0.800 ou eth0.267) pour différencier transit et peering. Nous faisons aussi afficher les informations du paquet par ces deux processus, adresse IP source et taille du paquet en octets.\\
+
+		Vous trouverez le script du sniffer en annexe à ce point \ref{sniffer}.\\
+
+\newpage

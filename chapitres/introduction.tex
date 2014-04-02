@@ -1,0 +1,11 @@
+\section{Introduction}
+	\vspace{0.3cm}
+	Dans le cadre des projets tuteurés de la licence professionnelle ASRALL, nous avons eu pour objectifs de concevoir une interface permettant d'informer en temps réel les abonnés d'un FAI à propos de leur consommation de bande passante ainsi de pouvoir leur permettre de réduire cette dernière. L'association Lorraine Data Network est un FAI (fournisseur d'accès à Internet) mais aussi un FSI (fournisseur de services Internet). Le but de l'association est d'offrir des services aux utilisateurs pour défendre sa vision du réseau.\\ 
+
+	C'est en effet une association à but non-lucratif, pour la défense d'un Internet libre, neutre et décentralisé. La facturation du transitaire étant basée sur le débit, l'usage fait de leur ligne par les adhérents a un impact direct sur celle-ci. L'objectif est donc de pouvoir permettre aux usagers de prendre conscience de leur impact sur le réseau, en fonction des différents services souscrits.\\
+	
+	Nous avons donc dû recréer le réseau en production de manière minimaliste, de façon à pouvoir l'utiliser comme plateforme de test. Pour ce faire nous avons installé Debian Wheezy sur 2 machines, la première servant de routeur, et la seconde hébergeant les différents services. Il fallait ensuite une solution pour calculer les débits différenciés à partir d'une interface réseau, d'un vhost ou d'un service pour les représenter sous forme de graphiques (RRD) et indique le 95\up{ème} centile correspondant à l'abonné. Les tuteurs nous ont orientés sur la solution Zabbix. Les utilisateurs devront ensuite être en mesure de les consulter avec un accès limité (vues) sur le serveur Zabbix.\\
+
+Le projet devra également être capable de lever des alertes à partir de seuils et éventuellement de restreindre le débit de l'interface / du vhost / du service. 
+
+\newpage

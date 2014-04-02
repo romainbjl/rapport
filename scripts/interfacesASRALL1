@@ -1,0 +1,37 @@
+# This file describes the network interfaces available on your system
+# and how to activate them. For more information, see interfaces(5).
+
+# The loopback network interface
+auto lo
+iface lo inet loopback
+
+# The primary network interface
+allow-hotplug eth1
+iface eth1 inet dhcp
+
+auto eth0.800
+iface eth0.800 inet static
+	address 10.42.0.2
+	netmask 255.255.255.254
+
+auto eth0.267
+iface eth0.267 inet static
+	address 10.43.0.2
+	netmask 255.255.255.254
+
+#allow-hotplug eth0
+#iface eth0 inet static
+#	address 10.42.0.2
+#	netmask 255.255.255.254
+#
+#iface eth0 inet static
+#	address 10.200.42.1
+#	netmask 255.255.255.255
+#
+#iface eth0 inet6 static
+#	address fcab::1
+#	netmask 112
+#
+#iface eth0 inet6 static
+#	address fcee:dead:babe::1
+#	netmask 128

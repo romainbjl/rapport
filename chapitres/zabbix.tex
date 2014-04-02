@@ -1,0 +1,140 @@
+\section{Zabbix}
+	\subsection{Présentation de la solution}
+		\vspace{0.3cm}
+			
+		Zabbix est un logiciel de monitoring open source sous licence GPL créé par Alexei Vladishev. Ce logiciel permet de superviser des réseaux, et de surveiller les statuts de différents services, systèmes et réseaux.\\
+
+		Un serveur Zabbix peut être décomposé en trois parties. Tout d’abord, l’application est composée d’une partie données, avec notamment l’utilisation d’un serveur de base de données (MySQL dans notre cas), permettant de stocker les informations sur les paramètres des hôtes, des évènements. Ensuite, il y a un serveur de traitement Zabbix Server, gérant les différents outils de supervision et de surveillance. Et pour finir, l’interface web pour configurer et administrer Zabbix.\\
+
+	\subsection{Installation}
+		\subsubsection{Installation de la base de données MySQL}
+			\vspace{0.3cm}
+
+			Pour commencer, nous devons installer la base de données. Pour cela il suffit d'installer le paquet \verb?mysql-server? mais attention pas besoin de créer de base de données. En effet l'installation des paquets Zabbix créeront eux-mêmes la bonne base, néanmoins pensez à démarrer votre service si ce n'est pas le cas avec la commande \verb?service mysql start?.
+
+			Vous pouvez aussi modifier le paramètre dans le fichier \verb?/etc/mysql/my.conf? pour mettre l'encodage des caractères en UTF-8 :
+			
+			\begin{verbatim}
+[mysqld]
+default-character-set=utf8
+
+			\end{verbatim}
+
+		\subsubsection{Installation des paquets}
+			\vspace{0.3cm}
+
+		L'installation d'un serveur Zabbix sur Debian reste très simple. En effet la communauté Zabbix a simplifié au maximum en créant un fichier .deb disponible sur leur dépôt. Pour déployer le service il nous suffit donc de télécharger le paquet .deb puis de l'installer avec un \verb?dpkg -i?. Ce paquet va tout simplement installer les sources, ensuite nous pourrons lancer l'installation des paquets \verb?zabbix-server-mysql zabbix-frontend-php? avec un simple \verb?apt-get?.\\
+		
+		\fcolorbox{gray}{black}{
+				\begin{minipage}{0.9\textwidth}
+				\color{white}
+					root@services \$ wget http://repo.zabbix.com/zabbix/2.0/debian/pool/main/z/zabbix-release/zabbix-release\_2.0-1wheezy\_all.deb
+					
+					root@services \$ dpkg -i zabbix-release\_2.0-1wheezy\_all.deb
+
+					root@services \$ apt-get update
+
+					root@services \$ apt-get install -y zabbix-server-mysql zabbix-frontend-php
+				\color{black}
+				\end{minipage}
+			}
+			\\
+		
+		\subsubsection{Édition de la configuration PHP de l'application web Zabbix}
+			\vspace{0.3cm}
+			Le fichier de configuration Apache pour l'application web Zabbix est dans le répertoire \verb?/etc/apache2/conf.d/zabbix?. Certains paramètres PHP sont déjà configurés.\\
+\begin{verbatim}		
+php_value max_execution_time 300
+php_value memory_limit 128M
+php_value post_max_size 16M
+php_value upload_max_filesize 2M
+php_value max_input_time 300
+# php_value date.timezone Europe/Riga
+
+\end{verbatim}
+
+			On peut ensuite passer à la configuration de Zabbix via un navigateur à l'adresse \url{http://<ipDuServeur>/zabbix}, les mots de passe par défaut étant \verb?admin/zabbix?.\\
+
+	\subsection{\label{installAgent}Installation de l'agent}
+		\vspace{0.3cm}
+
+		Comme pour Nagios, Zabbix dispose d'un agent qui permet de remonter de multiples informations. Son installation reste très simplifiée, elle aussi, et est semblable à celle du serveur. Il suffit de télécharger le fichier \verb?.deb? sur la machine cliente, de le l'installer avec \verb?dpkg?, pour l'ajout des bonnes sources, puis de lancer un \verb?apt-get upgrade? suivi de l'installation du paquet \verb?zabbix-agent?. Enfin il faut indiquer à l'agent l'adresse IP du serveur pour l'autoriser à remonter des informations dans le fichier \verb?/etc/zabbix/zabbix_agentd.conf? vers la ligne 86. Dans notre cas nous avons choisi l'installation sur la machine routeur : \\
+
+		\fcolorbox{gray}{black}{
+				\begin{minipage}{0.9\textwidth}
+				\color{white}
+					root@router \$ wget http://repo.zabbix.com/zabbix/2.0/debian/pool/main/z/zabbix-release/zabbix-release 2.0-1wheezy all.deb
+
+					root@router \$ dpkg -i zabbix-release 2.0-1wheezy all.deb
+
+					root@router \$ apt-get update
+
+					root@router \$ apt-get install zabbix-agent
+
+					root@router \$ vim /etc/zabbix/zabbix\_agentd.conf +86
+
+						\color{yellow}84 \color{white} \# Server=
+
+						\color{yellow}85 
+						
+						86 \color{white} Server=172.16.90.41
+
+						\color{yellow}87 
+						
+						88 \color{white} \#\#\# Option: ListenPort
+				\color{black}
+				\end{minipage}
+			}
+			\\
+
+			Une fois l'installation finie, il faut déclarer le client à votre serveur Zabbix. Le plus simple reste de cloner votre serveur Zabbix, déjà présent dans \verb?configuration - hôtes?, et de simplement changer le nom de l'hôte ainsi que son adresse IP, puis de sauvegarder. Exemple dans l'image qui suit : \\
+
+			\begin{center}
+				\includegraphics[scale=0.35]{decouvertHost0.png}
+			\end{center}
+
+	\subsection{Mise à jour Zabbix}
+		\vspace{0.3cm}
+
+		Pour pouvoir effectuer des tests avec certaines solutions, nous avons dû passer notre serveur Zabbix de la version 2.0 à la version 2.2. En effet lors de l'installation avec le .deb, ce dernier ne vous met pas les sources les plus récentes. Avant toute intervention sur votre serveur il est fortement conseillé d'effectuer des sauvegardes de votre solution, pour cela il suffit de faire un \verb?cp -r? de tout le dossier \verb?/etc/zabbix? et une sauvegarde de la base de données (avec la commande \verb?mysqldump? pour les base sous MySQL).\\
+
+		Une fois les sauvegardes effectuées, il suffit de modifier le fichier des sources Zabbix et de mettre à jour les paquets. Dans notre cas nous nous contenterons de tous les mettre à jour, et pas uniquement ceux de la solution. Lors de l'opération, il faudra regarder le log \verb?zabbix_server.log? avec un \verb?tail -f? pour voir si elle s'effectue correctement. Il se peut qu'un \verb?apt-get update && apt-get upgrade? ne suffise pas. Dans ce cas là il faudra effectuer directement un \verb?apt-get dist-upgrade?.
+
+		\fcolorbox{gray}{black}{
+				\begin{minipage}{0.9\textwidth}
+				\color{white}
+					root@services \$ \#Modification du fichier sources
+
+					root@services \$ vim /etc/apt/sources.list.d/zabbix.list
+
+					\color{yellow}1 \color{white} deb http://repo.zabbix.com/zabbix/2.2/debian wheezy main
+
+					\color{yellow}2 \color{white} deb-src http://repo.zabbix.com/zabbix/2.2/debian wheezy main\\
+
+					root@services \$ \#Mise à jour des sources et des paquets
+
+					root@services \$ apt-get update
+
+					root@services \$ apt-get upgrade
+
+					root@services \$ \#Vérification de l'évolution de la mise à jour dans les logs
+
+					root@services \$ tail -f /var/log/zabbix/zabbix\_server.log
+
+					root@services \$ \#Si la mise à jour ne s'effectue pas correctement tentez à nouveau avec un dist-upgrade
+
+					root@services \$ apt-get dist-upgrade
+
+					root@services \$ tail -f /var/log/zabbix/zabbix\_server.log
+				\color{black}
+				\end{minipage}
+			}
+			\\
+
+			Lorsque les logs affichent correctement la progression de la mise à jour, vous pourrez vérifier en retournant sur l'interface web de Zabbix que tout est correctement opérationnel.\\
+
+	\subsection{Documentation pour LDN}
+		\vspace{0.3cm}
+		Pour alimenter le wiki de LDN et établir une documentation sur l'installation de Zabbix et de l'agent, les tuteurs nous ont demandé une documentation technique simplifiée. Vous pourrez le retrouver en annexe au point \ref{docLDN}.\\
+
+\newpage

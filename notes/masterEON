@@ -1,7 +1,8 @@
 Création d'un master EyesOfNetwork
-On installe EyesOfNetwork sur la machine Shuttle (micro PC) avec une configuration générique pour ensuitee en faire une image maîte que l'on pourra déployer en virtuel sur les serveurs d'autres clients.
+On installe EyesOfNetwork sur la machine Shuttle (micro PC) avec une configuration générique pour ensuite en faire une image maître que l'on pourra déployer en virtuel sur les serveurs d'autres clients.
 	-> On donne un hostname générique "eon" (on ajoutera le domaine après l'installation)
 	-> On laisse le DHCP attribuer automatiquement une adresse IP au serveur EON afin de ne pas générer de conflit d'adresse puis on la modifie au moment de l'intégration du serveur chez le client (.250 de préférence)
 	-> Fuseau horaire : Europe/Paris
-	
-
+	-> Mot de passe : Admin2012
+		-> L'assistant d'installation indique "Mot de passe peu fiable", on clique sur "Utiliser malgré tout"
+	-> Pour le partitionnement, on choisi l'option "Créer un partitionnement personnalisé"

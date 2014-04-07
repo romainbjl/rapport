@@ -6,3 +6,19 @@ On installe EyesOfNetwork sur la machine Shuttle (micro PC) avec une configurati
 	-> Mot de passe : Admin2012
 		-> L'assistant d'installation indique "Mot de passe peu fiable", on clique sur "Utiliser malgré tout"
 	-> Pour le partitionnement, on choisi l'option "Créer un partitionnement personnalisé"
+		-> créer :
+			-> partition standard
+				-> point de montage : /boot
+				-> système de fichiers : ext4
+			-> volume physique LVM
+				-> taille : 55300
+			-> groupe de volumes LVM
+				-> ajouter
+					-> point de montage : /
+						système de fichiers : ext4
+						nom : lv_root
+						taille : 51200
+
+					-> système de fichiers : SWAP
+						nom : lv_swap
+						taille : 4096
